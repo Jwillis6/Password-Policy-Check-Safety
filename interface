@@ -1,0 +1,103 @@
+<script>
+    document.querySelector('button[type="submit"]').addEventListener('click', function(e) {
+        // The form has onsubmit="event.preventDefault();", but we'll grab the button click
+        const tosChecked = document.getElementById('tos').checked;
+        if (!tosChecked) {
+            alert("Please agree to the Terms of Service.");
+            return;
+        }
+
+        // 1. Gather Inputs
+        const minLength = parseInt(document.getElementById('min_length').value) || 0;
+        const expirationDays = parseInt(document.getElementById('expiration_days').value) || 0;
+        const lockoutThreshold = parseInt(document.getElementById('lockout_threshold').value) || 0;
+        const hasUpper = document.getElementById('uppercase_required').checked;
+        const hasLower = document.getElementById('lowercase_required').checked;
+        const hasNum = document.getElementById('numbers_required').checked;
+        const hasSpecial = document.getElementById('special_chars_required').checked;
+        const hasMFA = document.getElementById('mfa_required').checked;
+
+        let score = 0;
+        let recommendations = [];
+
+        // 2. Evaluate based on modern standards (e.g., NIST guidelines)
+        
+        // Minimum Length evaluation
+        if (minLength >= 14) {
+            score += 40;
+            recommendations.push("✅ Excellent minimum password length.");
+        } else if (minLength >= 8) {
+            score += 20;
+            recommendations.push("⚠️ Minimum length is acceptable, but 14+ characters (passphrases) are recommended.");
+        } else {
+            recommendations.push("❌ Critical: Minimum length is too short. Increase to at least 8 (preferably 14+).");
+        }
+
+        // Multi-Factor Authentication
+        if (hasMFA) {
+            score += 40;
+            recommendations.push("✅ MFA is enabled. This is the single most important security control.");
+        } else {
+            recommendations.push("❌ Critical: MFA is not required. Enable MFA immediately to mitigate credential theft.");
+        }
+
+        // Lockout Policy
+        if (lockoutThreshold > 0 && lockoutThreshold <= 10) {
+            score += 15;
+            recommendations.push("✅ Reasonable lockout threshold prevents brute-force attacks.");
+        } else if (lockoutThreshold === 0) {
+            recommendations.push("❌ Critical: No lockout threshold. This leaves you vulnerable to brute-force and credential stuffing.");
+        }
+
+        // Expiration (NIST recommends AGAINST arbitrary expiration unless a breach is known)
+        if (expirationDays > 0 && expirationDays <= 90) {
+            recommendations.push("ℹ️ Note: Modern NIST guidelines recommend removing arbitrary password rotation (like 90-day expiry) as it leads to weaker passwords, unless a breach is suspected.");
+        } else if (expirationDays === 0) {
+            score += 5;
+            recommendations.push("✅ No arbitrary password rotation, aligning with modern NIST guidelines.");
+        }
+
+        // 3. Determine Risk Level
+        let riskLevel = "";
+        let riskClass = "";
+        
+        // Cap score at 100
+        score = Math.min(score, 100);
+
+        if (score >= 80) {
+            riskLevel = "Low";
+            riskClass = "risk-Low";
+        } else if (score >= 50) {
+            riskLevel = "Medium";
+            riskClass = "risk-Medium";
+        } else {
+            riskLevel = "High";
+            riskClass = "risk-High";
+        }
+
+        // 4. Update the Dashboard DOM
+        const dashboard = document.getElementById('dashboard');
+        const scoreCard = document.getElementById('scoreCard');
+        const displayScore = document.getElementById('displayScore');
+        const displayRisk = document.getElementById('displayRisk');
+        const recList = document.getElementById('recommendationsList');
+
+        // Show dashboard
+        dashboard.style.display = 'block';
+
+        // Update Score and Classes
+        displayScore.textContent = `${score}/100`;
+        displayRisk.textContent = `Risk Level: ${riskLevel}`;
+        
+        // Reset and apply risk colors
+        scoreCard.className = 'score-card ' + riskClass;
+
+        // Populate Recommendations
+        recList.innerHTML = '';
+        recommendations.forEach(rec => {
+            const li = document.createElement('li');
+            li.textContent = rec;
+            recList.appendChild(li);
+        });
+    });
+</script>
